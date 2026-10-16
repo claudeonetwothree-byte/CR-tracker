@@ -63,6 +63,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-sans);
 h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
 .asof{font-family:var(--f-mono);font-size:11.5px;color:var(--fg-faint);
       letter-spacing:.02em;text-transform:uppercase}
+.call{margin-left:auto;display:inline-flex;align-items:center;gap:7px;
+      text-decoration:none;background:var(--accent);color:var(--on-accent);
+      font-size:13.5px;font-weight:600;padding:7px 15px;border-radius:999px;
+      white-space:nowrap}
+.call svg{width:15px;height:15px;flex:0 0 auto}
 .tabs{display:flex;gap:4px;padding-bottom:10px;flex-wrap:wrap}
 .tab{appearance:none;border:1px solid var(--line);background:var(--surface);
      color:var(--fg-dim);font:inherit;font-size:13.5px;font-weight:500;
@@ -193,6 +198,7 @@ li.defer::before{background:var(--defer)}
 
 @media (max-width:420px){
   h1{font-size:17px}
+  .call{font-size:13px;padding:6px 13px}
 }
 @media (prefers-reduced-motion:no-preference){
   li{transition:border-color .15s}
@@ -216,6 +222,11 @@ li.defer::before{background:var(--defer)}
   <div class="ttl">
     <h1>Трекер пятиминутки</h1>
     <span class="asof" id="asof"></span>
+    <a class="call" href="https://meet.google.com/qtm-anfy-wvj" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+      </svg>Созвон</a>
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-t" aria-selected="true">Задачи</button>
