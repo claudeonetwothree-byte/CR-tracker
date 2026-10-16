@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Трекер пятиминутки</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* Один столбец: закреплённая панель фильтров, под ней список задач, сгруппированный по сроку. */
+:root{
+  --bg:#f5f7f9; --surface:#ffffff; --surface-2:#eceff4; --chip:#e3e8ef;
+  --fg:#161a20; --fg-dim:#5b6472; --fg-faint:#8a93a2; --line:#dde2ea;
+  --accent:#0d6b67; --accent-soft:#e2f0ef; --on-accent:#ffffff;
+  --over:#b02028; --over-bg:#fdecec; --over-line:#f3c9c9;
+  --today:#9c5600; --today-bg:#fdf2e1; --today-line:#f0d9ad;
+  --week:#1b5786; --week-bg:#e8f1f8; --week-line:#c6dcee;
+  --later:#5b6472; --later-bg:#edf0f4; --later-line:#dbe1e9;
+  --ok:#15674a; --ok-bg:#e4f3ec; --ok-line:#bfe0d1;
+  --defer:#6a5a8a; --defer-bg:#efecf6; --defer-line:#ddd6ea;
+  --f-sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#161a20; --surface-2:#1d232b; --chip:#242b35;
+  --fg:#e7eaf0; --fg-dim:#98a1af; --fg-faint:#6f7988; --line:#282f39;
+  --accent:#43b5ac; --accent-soft:#12302e; --on-accent:#06211f;
+  --over:#ff8f88; --over-bg:#36191b; --over-line:#5a2a2c;
+  --today:#e5a948; --today-bg:#332513; --today-line:#54401d;
+  --week:#79bef0; --week-bg:#14283a; --week-line:#234258;
+  --later:#98a1af; --later-bg:#1d232b; --later-line:#2d353f;
+  --ok:#5fc79b; --ok-bg:#12302a; --ok-line:#215043;
+  --defer:#a79bc4; --defer-bg:#241f33; --defer-line:#3a3350;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#161a20; --surface-2:#1d232b; --chip:#242b35;
+  --fg:#e7eaf0; --fg-dim:#98a1af; --fg-faint:#6f7988; --line:#282f39;
+  --accent:#43b5ac; --accent-soft:#12302e; --on-accent:#06211f;
+  --over:#ff8f88; --over-bg:#36191b; --over-line:#5a2a2c;
+  --today:#e5a948; --today-bg:#332513; --today-line:#54401d;
+  --week:#79bef0; --week-bg:#14283a; --week-line:#234258;
+  --later:#98a1af; --later-bg:#1d232b; --later-line:#2d353f;
+  --ok:#5fc79b; --ok-bg:#12302a; --ok-line:#215043;
+  --defer:#a79bc4; --defer-bg:#241f33; --defer-line:#3a3350;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-sans);
+     font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px;padding-block:0 40px}
+
+/* ---------- шапка ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;
+     background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:720px;margin:0 auto;padding:0 16px}
+.ttl{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-block:14px 10px}
+h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+.asof{font-family:var(--f-mono);font-size:11.5px;color:var(--fg-faint);
+      letter-spacing:.02em;text-transform:uppercase}
+.tabs{display:flex;gap:4px;padding-bottom:10px;flex-wrap:wrap}
+.tab{appearance:none;border:1px solid var(--line);background:var(--surface);
+     color:var(--fg-dim);font:inherit;font-size:13.5px;font-weight:500;
+     padding:6px 14px;border-radius:999px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);
+     color:var(--on-accent)}
+.who{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;
+     scrollbar-width:none;-ms-overflow-style:none}
+.who::-webkit-scrollbar{display:none}
+.chip{appearance:none;flex:0 0 auto;border:1px solid var(--line);background:var(--chip);
+      color:var(--fg-dim);font:inherit;font-size:13px;font-weight:500;
+      padding:5px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.chip b{font-family:var(--f-mono);font-weight:600;font-size:11.5px;
+        margin-left:5px;color:var(--fg-faint)}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.chip[aria-pressed="true"] b{color:var(--bg);opacity:.65}
+.chip:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- сводка ---------- */
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px;
+     padding-block:14px 4px}
+.sum div{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+         padding:9px 10px;min-width:0}
+.sum .n{font-family:var(--f-mono);font-size:21px;font-weight:600;line-height:1.1;
+        font-variant-numeric:tabular-nums;display:block}
+.sum .k{font-size:11px;color:var(--fg-dim);letter-spacing:.02em;display:block;margin-top:2px}
+.sum .over .n{color:var(--over)} .sum .today .n{color:var(--today)}
+.sum .week .n{color:var(--week)} .sum .later .n{color:var(--later)} .sum .defer .n{color:var(--defer)}
+.role{font-size:12.5px;color:var(--fg-dim);padding-block:10px 0}
+
+/* ---------- секции ---------- */
+details.sec{margin-top:22px}
+details.sec>ul{margin-top:9px}
+summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;
+        padding:5px 0;-webkit-tap-highlight-color:transparent}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";flex:0 0 auto;width:6px;height:6px;margin:0 2px 2px 1px;
+                border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+                transform:rotate(-45deg);transform-origin:center}
+details[open]>summary::before{transform:rotate(45deg) translate(-1px,-1px)}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.cnt{font-family:var(--f-mono);font-size:11.5px;font-weight:600;
+     padding:1px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
+.rule{flex:1;height:1px;background:var(--line)}
+.shut{font-size:11.5px;color:var(--fg-faint);font-family:var(--f-mono)}
+/* ---------- канбан проблем ---------- */
+.kanban{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;
+        margin-top:22px;align-items:start}
+.kanban>details{margin-top:0;min-width:0;background:var(--surface-2);
+                border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+.kanban>details>summary{padding:2px 0}
+.kanban>details>ul{margin-top:10px;gap:8px}
+.kanban li{padding:10px 11px 10px 12px;background:var(--surface)}
+.kanban .task{font-size:13.5px;line-height:1.38}
+.kanban .meta{font-size:11px;gap:8px;margin-top:6px}
+.kanban .sol{font-size:12px;margin-top:6px}
+.c-raised>summary{color:var(--over)} .c-raised .cnt{background:var(--over-bg);color:var(--over)}
+.c-work>summary{color:var(--today)} .c-work .cnt{background:var(--today-bg);color:var(--today)}
+.c-done>summary{color:var(--ok)} .c-done .cnt{background:var(--ok-bg);color:var(--ok)}
+li.raised::before{background:var(--over)}
+li.work::before{background:var(--today)}
+li.done::before{background:var(--ok)}
+.none{font-size:12.5px;color:var(--fg-faint);padding:12px 2px;line-height:1.5}
+@media (max-width:760px){.kanban{grid-template-columns:1fr}}
+details[open]>summary .shut{display:none}
+.s-over summary{color:var(--over)} .s-over .cnt{background:var(--over-bg);color:var(--over)}
+.s-today summary{color:var(--today)} .s-today .cnt{background:var(--today-bg);color:var(--today)}
+.s-week summary{color:var(--week)} .s-week .cnt{background:var(--week-bg);color:var(--week)}
+.s-later summary{color:var(--later)} .s-later .cnt{background:var(--later-bg);color:var(--later)}
+.s-done summary{color:var(--ok)} .s-done .cnt{background:var(--ok-bg);color:var(--ok)}
+.s-defer summary{color:var(--defer)} .s-defer .cnt{background:var(--defer-bg);color:var(--defer)}
+
+/* ---------- карточка ---------- */
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+ul.all{margin-top:22px}
+li{background:var(--surface);border:1px solid var(--line);border-radius:9px;
+   padding:11px 13px 11px 14px;position:relative;overflow:hidden}
+li::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--later-line)}
+li.over::before{background:var(--over)} li.today::before{background:var(--today)}
+li.week::before{background:var(--week)} li.later::before{background:var(--later-line)}
+li.defer::before{background:var(--defer)}
+.card-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
+.pers{font-size:12px;font-weight:600;color:var(--fg-dim)}
+.pill{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.03em;
+      padding:2px 7px;border-radius:5px;border:1px solid transparent;white-space:nowrap}
+.p-over{background:var(--over-bg);color:var(--over);border-color:var(--over-line)}
+.p-today{background:var(--today-bg);color:var(--today);border-color:var(--today-line)}
+.p-week{background:var(--week-bg);color:var(--week);border-color:var(--week-line)}
+.p-later{background:var(--later-bg);color:var(--later);border-color:var(--later-line)}
+.p-defer{background:var(--defer-bg);color:var(--defer);border-color:var(--defer-line)}
+.p-done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
+.p-cancel{background:var(--later-bg);color:var(--later);border-color:var(--later-line)}
+.meta .ok{color:var(--ok)}
+.task{font-size:15px;line-height:1.4;margin:0}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;
+      font-family:var(--f-mono);font-size:11.5px;color:var(--fg-faint);
+      font-variant-numeric:tabular-nums}
+.meta .mv{color:var(--today)}
+.note{margin:7px 0 0;font-size:13px;color:var(--fg-dim);line-height:1.45}
+.flag{display:inline-block;font-size:11px;font-weight:600;color:var(--today);
+      background:var(--today-bg);border:1px solid var(--today-line);
+      padding:1px 6px;border-radius:5px;margin-top:7px}
+.sol{margin:7px 0 0;font-size:13px;color:var(--fg-dim);line-height:1.45;
+     padding-left:10px;border-left:2px solid var(--line)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:9px;
+       padding:22px 16px;text-align:center;color:var(--fg-dim);font-size:14px}
+.foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);
+      font-size:12px;color:var(--fg-faint);line-height:1.55}
+
+/* ---------- вход ---------- */
+.gate{display:flex;align-items:center;justify-content:center;
+      min-height:70vh;padding:24px 16px}
+.gate-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+           padding:26px 22px;width:100%;max-width:360px;
+           display:flex;flex-direction:column;gap:12px}
+.gate-card h1{font-size:19px}
+.gate-card p{margin:0;font-size:13.5px;color:var(--fg-dim);line-height:1.45}
+.gate-card input{font:inherit;font-size:16px;padding:11px 13px;border-radius:8px;
+                 border:1px solid var(--line);background:var(--bg);color:var(--fg);
+                 width:100%;min-width:0}
+.gate-card input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.gate-card button{font:inherit;font-size:15px;font-weight:600;padding:11px 16px;
+                  border-radius:8px;border:1px solid var(--accent);cursor:pointer;
+                  background:var(--accent);color:var(--on-accent)}
+.gate-card button[disabled]{opacity:.55;cursor:default}
+.err{color:var(--over) !important;font-weight:500}
+
+@media (max-width:420px){
+  h1{font-size:17px}
+}
+@media (prefers-reduced-motion:no-preference){
+  li{transition:border-color .15s}
+  summary::before{transition:transform .16s ease}
+}
+</style>
+</head>
+<body>
+<div class="gate" id="gate">
+  <form class="gate-card" id="gf">
+    <h1>Трекер пятиминутки</h1>
+    <p>Внутренняя страница Chicken Republic. Введите пароль, который дал руководитель.</p>
+    <input type="password" id="pw" autocomplete="current-password"
+           placeholder="Пароль" aria-label="Пароль" required>
+    <button type="submit" id="go">Войти</button>
+    <p class="err" id="err" hidden></p>
+  </form>
+</div>
+<div id="app" hidden>
+<div class="top"><div class="top-in">
+  <div class="ttl">
+    <h1>Трекер пятиминутки</h1>
+    <span class="asof" id="asof"></span>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-t" aria-selected="true">Задачи</button>
+    <button class="tab" role="tab" id="tab-a" aria-selected="false">Все задачи</button>
+    <button class="tab" role="tab" id="tab-p" aria-selected="false">Проблемы</button>
+  </div>
+  <div class="who" id="who"></div>
+</div></div>
+
+<div class="wrap">
+  <div id="sum"></div>
+  <div class="role" id="role"></div>
+  <div id="body"></div>
+  <p class="foot" id="foot"></p>
+</div>
+</div>
+
+<script>
+let DATA = null;
+
+/* ---- горизонт: та же граница недели, что и в файле ---- */
+const _n = new Date();
+const T0 = new Date(_n.getFullYear(), _n.getMonth(), _n.getDate());
+const isoDow = T0.getDay() === 0 ? 7 : T0.getDay();
+const EOW = new Date(T0); EOW.setDate(EOW.getDate() + ((7 - isoDow) || 7));
+
+const d2 = s => s ? new Date(s + 'T00:00:00') : null;
+const ORDER = ['over', 'today', 'week', 'later', 'nodate', 'defer', 'block'];
+const LBL = {over:'Просрочено', today:'Сегодня', week:'До конца недели',
+             later:'Больше недели', nodate:'Без срока',
+             defer:'Отложено', block:'Заблокировано'};
+const PILL = {over:'ПРОСРОЧЕНА', today:'СЕГОДНЯ', week:'НА НЕДЕЛЕ',
+              later:'БОЛЬШЕ НЕДЕЛИ', nodate:'БЕЗ СРОКА',
+              defer:'ОТЛОЖЕНА', block:'ЗАБЛОКИРОВАНА'};
+const CLS = {over:'over', today:'today', week:'week', later:'later',
+             nodate:'later', defer:'defer', block:'later'};
+
+function horizon(due, st){
+  if (st === 'Отложено') return 'defer';
+  if (st === 'Заблокировано') return 'block';
+  const d = d2(due);
+  if (!d) return 'nodate';
+  if (d < T0) return 'over';
+  if (d.getTime() === T0.getTime()) return 'today';
+  if (d <= EOW) return 'week';
+  return 'later';
+}
+const MN = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const DW = ['вс','пн','вт','ср','чт','пт','сб'];
+function fmt(d){
+  return d.getDate() + ' ' + MN[d.getMonth()] + ', ' + DW[d.getDay()];
+}
+function fdate(s){
+  const d = d2(s); if (!d) return '—';
+  return fmt(d);
+}
+const days = s => Math.round((T0 - d2(s)) / 86400000);
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---- состояние ---- */
+let view = 'tasks';
+let who = 'all';
+try { const w = localStorage.getItem('cr-who'); if (w) who = w; } catch (e) {}
+
+/* по умолчанию все разделы свёрнуты — раскрывает сам сотрудник */
+const OPEN_DEF = {over:false, today:false, week:false, later:false,
+                  nodate:false, block:false,
+                  defer:false, k1:true, k2:true, k3:false, done:false};
+let open = Object.assign({}, OPEN_DEF);
+try {
+  const o = JSON.parse(localStorage.getItem('cr-open2') || 'null');
+  if (o && typeof o === 'object') open = Object.assign(open, o);
+} catch (e) {}
+const saveOpen = () => { try { localStorage.setItem('cr-open2', JSON.stringify(open)); } catch (e) {} };
+
+function bindSections(){
+  document.querySelectorAll('details[data-k]').forEach(d => {
+    d.addEventListener('toggle', () => { open[d.dataset.k] = d.open; saveOpen(); });
+  });
+}
+const sec = (k, cls, label, n, inner) =>
+  `<details class="sec s-${cls}" data-k="${k}"${open[k] ? ' open' : ''}>` +
+  `<summary><span class="lbl">${label}</span><span class="cnt">${n}</span>` +
+  `<span class="rule"></span><span class="shut">показать</span></summary>` +
+  `<ul>${inner}</ul></details>`;
+
+const $ = id => document.getElementById(id);
+const items = () => view === 'probs' ? DATA.probs : DATA.tasks;
+const doneAll = () => DATA.done || [];
+const doneMine = () => who === 'all' ? doneAll() : doneAll().filter(x => x.e === who);
+const mine  = () => who === 'all' ? items()
+  : items().filter(x => (view === 'probs' ? owner(x) : x.e) === who);
+
+/* ---- панель людей ---- */
+function renderWho(){
+  const list = items();
+  const counts = {};
+  list.forEach(x => {
+    const k = view === 'probs' ? owner(x) : x.e;
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  if (view !== 'probs') doneAll().forEach(x => {
+    counts[x.e] = (counts[x.e] || 0) + (view === 'all' ? 1 : 0);
+  });
+  const names = DATA.emps.filter(e => counts[e.n] !== undefined);
+  if (who !== 'all' && !counts[who]) who = 'all';
+  let h = `<button class="chip" aria-pressed="${who==='all'}" data-w="all">Все<b>${list.length}</b></button>`;
+  h += names.map(e =>
+    `<button class="chip" aria-pressed="${who===e.n}" data-w="${esc(e.n)}">${esc(e.n)}<b>${counts[e.n]}</b></button>`
+  ).join('');
+  $('who').innerHTML = h;
+  $('who').querySelectorAll('.chip').forEach(b => b.onclick = () => {
+    who = b.dataset.w;
+    try { localStorage.setItem('cr-who', who); } catch (e) {}
+    render();
+  });
+}
+
+/* ---- сводка ---- */
+function renderSum(rows){
+  if (view === 'all'){
+    const dn = doneMine();
+    const cl = dn.filter(t => t.s === 'Выполнено').length;
+    const vs = dn.filter(t => t.s === 'Выполнено' && t.cl && t.d && t.cl <= t.d).length;
+    const ov = rows.filter(t => horizon(t.d, t.s) === 'over').length;
+    $('sum').innerHTML =
+      `<div><span class="n">${rows.length + dn.length}</span><span class="k">всего задач</span></div>` +
+      `<div class="today"><span class="n">${rows.length}</span><span class="k">активных</span></div>` +
+      `<div class="later"><span class="n">${cl}</span><span class="k">закрыто</span></div>` +
+      `<div class="defer"><span class="n">${vs}</span><span class="k">из них в срок</span></div>` +
+      `<div class="over"><span class="n">${ov}</span><span class="k">просрочено</span></div>`;
+    return;
+  }
+  if (view !== 'tasks'){ $('sum').innerHTML = ''; return; }
+  const g = {over:0, today:0, week:0, later:0, defer:0};
+  rows.forEach(t => {
+    const h = horizon(t.d, t.s);
+    g[h === 'nodate' ? 'later' : h === 'block' ? 'defer' : h]++;
+  });
+  $('sum').innerHTML =
+    `<div class="over"><span class="n">${g.over}</span><span class="k">просрочено</span></div>` +
+    `<div class="today"><span class="n">${g.today}</span><span class="k">сегодня</span></div>` +
+    `<div class="week"><span class="n">${g.week}</span><span class="k">до конца недели</span></div>` +
+    `<div class="later"><span class="n">${g.later}</span><span class="k">больше недели</span></div>` +
+    `<div class="defer"><span class="n">${g.defer}</span><span class="k">отложено</span></div>`;
+}
+
+/* ---- карточки ---- */
+function taskCard(t, showName){
+  const h = horizon(t.d, t.s);
+  const nc = (t.c || '').startsWith('СРОК НЕ НАЗВАН');
+  const note = nc ? (t.c || '').replace(/^СРОК НЕ НАЗВАН[^.]*\.\s*/, '') : (t.c || '');
+  return `<li class="${CLS[h]}">
+    <div class="card-top">
+      ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
+      <span class="pill p-${CLS[h]}">${PILL[h]}</span>
+    </div>
+    <p class="task">${esc(t.t)}</p>
+    <div class="meta">
+      <span>срок ${fdate(t.d)}</span>
+      ${h === 'over' ? `<span class="mv">+${days(t.d)} дн</span>` : ''}
+      ${t.m > 0 ? `<span class="mv">переносов ${t.m}</span>` : ''}
+      ${t.s === 'Заблокировано' ? `<span>заблокирована</span>` : ''}
+    </div>
+    ${nc ? `<span class="flag">срок поставлен не сотрудником</span>` : ''}
+    ${note ? `<p class="note">${esc(note)}</p>` : ''}
+  </li>`;
+}
+
+/* ---------- закрытые задачи ---------- */
+function doneCard(t, showName){
+  const cancelled = t.s === 'Отменено';
+  let verdict;
+  if (cancelled){
+    verdict = '<span>снято</span>';
+  } else if (!t.d){
+    verdict = '<span>без срока</span>';
+  } else if (!t.cl){
+    verdict = '<span>дата закрытия не указана</span>';
+  } else if (t.cl <= t.d){
+    verdict = '<span class="ok">в срок</span>';
+  } else {
+    const late = Math.round((d2(t.cl) - d2(t.d)) / 86400000);
+    verdict = `<span class="mv">с опозданием ${late} дн</span>`;
+  }
+  return `<li class="done">
+    <div class="card-top">
+      ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
+      <span class="pill ${cancelled ? 'p-cancel' : 'p-done'}">${esc(t.s)}</span>
+    </div>
+    <p class="task">${esc(t.t)}</p>
+    <div class="meta">
+      <span>${t.cl ? 'закрыто ' + fdate(t.cl) : 'дата закрытия не указана'}</span>
+      ${verdict}
+      ${t.m > 0 ? `<span class="mv">переносов ${t.m}</span>` : ''}
+    </div>
+    ${t.c ? `<p class="note">${esc(t.c)}</p>` : ''}
+  </li>`;
+}
+
+function doneSection(rows, showName){
+  if (!rows.length) return '';
+  const srt = rows.slice().sort((a, b) => (a.cl || '0') > (b.cl || '0') ? -1 : 1);
+  const inTime = srt.filter(t => t.s === 'Выполнено' && t.cl && t.d && t.cl <= t.d).length;
+  return `<details class="sec s-done" data-k="done"${open.done ? ' open' : ''}>` +
+    `<summary><span class="lbl">Закрыто</span><span class="cnt">${srt.length}</span>` +
+    `<span class="rule"></span><span class="shut">в срок ${inTime}</span></summary>` +
+    `<ul>${srt.map(t => doneCard(t, showName)).join('')}</ul></details>`;
+}
+
+/* ---------- канбан: три стадии проблемы ---------- */
+const STAGE = p => p.s === 'Поднято' ? 'k1'
+                 : (p.s === 'Решено' || p.s === 'Не подтвердилась') ? 'k3' : 'k2';
+const owner = p => p.e || p.w;
+const KLBL = {k1:'Проблемы', k2:'В процессе', k3:'Решено'};
+const KCLS = {k1:'raised', k2:'work', k3:'done'};
+
+function probCard(p, stage, showName){
+  let meta = '';
+  if (stage === 'k1'){
+    meta = `<span>поднял ${esc(p.w)}</span><span>${fdate(p.d)}</span>` +
+           (p.d ? `<span class="mv">${days(p.d)} дн без владельца</span>` : '');
+  } else if (stage === 'k2'){
+    meta = `<span>взял ${esc(p.e)}</span>` +
+           (p.tk ? `<span>взял ${fdate(p.tk)}</span>` : '') +
+           (p.due ? `<span class="mv">решит до ${fdate(p.due)}</span>` : '') +
+           (p.d ? `<span>поднято ${fdate(p.d)}, ${days(p.d)} дн</span>` : '');
+  } else {
+    meta = `<span>решил ${esc(p.e)}</span>` +
+           (p.r ? `<span>${fdate(p.r)}</span>` : `<span>дата не зафиксирована</span>`) +
+           (p.s === 'Не подтвердилась' ? `<span>не подтвердилась</span>` : '');
+  }
+  return `<li class="${KCLS[stage]}">
+    <div class="card-top">
+      ${showName && stage !== 'k1' ? `<span class="pers">${esc(p.e)}</span>` : ''}
+      <span class="pill p-later">${esc(p.cat || 'без категории')}</span>
+    </div>
+    <p class="task">${esc(p.t)}</p>
+    <div class="meta">${meta}</div>
+    ${p.sol ? `<p class="sol">${esc(p.sol)}</p>` : ''}
+  </li>`;
+}
+
+const EMPTY = {
+  k1: 'Пусто: у каждой поднятой проблемы есть владелец. Сюда попадёт проблема, которую назвали на пятиминутке, но никто не взял.',
+  k2: 'Ничего не в работе.',
+  k3: 'Пока ничего не закрыто.'
+};
+
+function kanban(rows, showName){
+  const g = {k1:[], k2:[], k3:[]};
+  rows.forEach(p => g[STAGE(p)].push(p));
+  g.k1.sort((a, b) => (a.d || '') < (b.d || '') ? -1 : 1);
+  g.k2.sort((a, b) => (a.due || '9999') < (b.due || '9999') ? -1 : 1);
+  g.k3.sort((a, b) => (a.r || '0') > (b.r || '0') ? -1 : 1);
+  return '<div class="kanban">' + ['k1', 'k2', 'k3'].map(k =>
+    `<details class="c-${KCLS[k]}" data-k="${k}"${open[k] ? ' open' : ''}>` +
+    `<summary><span class="lbl">${KLBL[k]}</span><span class="cnt">${g[k].length}</span>` +
+    `<span class="rule"></span><span class="shut">показать</span></summary>` +
+    (g[k].length
+      ? `<ul>${g[k].map(p => probCard(p, k, showName)).join('')}</ul>`
+      : `<p class="none">${EMPTY[k]}</p>`) +
+    '</details>').join('') + '</div>';
+}
+
+function render(){
+  renderWho();
+  const rows = mine();
+  const showName = who === 'all';
+  renderSum(rows);
+
+  if (who === 'all'){
+    $('role').textContent = '';
+  } else {
+    const pos = (DATA.emps.find(e => e.n === who) || {}).p || '';
+    const dn = doneMine();
+    const cl = dn.filter(t => t.s === 'Выполнено').length;
+    const vs = dn.filter(t => t.s === 'Выполнено' && t.cl && t.d && t.cl <= t.d).length;
+    $('role').textContent = (view === 'tasks' && dn.length)
+      ? `${pos} · закрыто ${cl}, из них в срок ${vs}, снято ${dn.length - cl}`
+      : pos;
+  }
+
+  if (view === 'all'){
+    const act = rows.slice().sort((a, b) => (a.d || '9999') < (b.d || '9999') ? -1 : 1);
+    const dn = doneMine().slice().sort((a, b) => (a.cl || '0') > (b.cl || '0') ? -1 : 1);
+    $('body').innerHTML = (act.length || dn.length)
+      ? '<ul class="all">' +
+        act.map(t => taskCard(t, showName)).join('') +
+        dn.map(t => doneCard(t, showName)).join('') +
+        '</ul>'
+      : '<div class="empty">Задач нет.</div>';
+  } else if (view === 'probs'){
+    $('body').innerHTML = kanban(rows, showName);
+  } else {
+    const g = {}; ORDER.forEach(k => g[k] = []);
+    rows.forEach(t => g[horizon(t.d, t.s)].push(t));
+    ORDER.forEach(k => g[k].sort((a, b) => (a.d || '9999') < (b.d || '9999') ? -1 : 1));
+    const active = ORDER.filter(k => g[k].length).map(k =>
+      sec(k, CLS[k], LBL[k], g[k].length, g[k].map(t => taskCard(t, showName)).join(''))
+    ).join('');
+    $('body').innerHTML =
+      (active || '<div class="empty">Активных задач нет — всё закрыто.</div>') +
+      doneSection(doneMine(), showName);
+  }
+
+  bindSections();
+
+  const dd = d2(DATA.asof);
+  $('asof').textContent = 'данные от ' + fdate(DATA.asof);
+  $('foot').innerHTML =
+    `Состояние на пятиминутку ${fdate(DATA.asof)}. Цвет и раздел считаются от срока ` +
+    `при каждом открытии страницы, поэтому «сегодня» — это всегда сегодня. ` +
+    `Конец недели — воскресенье ${fmt(EOW)}. «Отложено» и «Заблокировано» не считаются просроченными.<br>` +
+    (view === 'all'
+      ? `Здесь всё, что было у человека: сначала активные по сроку, под ними закрытые `
+        + `от свежих к старым. Метка на карточке говорит, в каком состоянии задача.<br>`
+      : view === 'probs'
+      ? `Проблема идёт слева направо: подняли → кто-то взял и назвал срок → решено. `
+        + `«Решено» свёрнуто, там вся история. Как оставите колонки, так и откроются `
+        + `в следующий раз.<br>`
+      : `Все разделы свёрнуты — нажмите на заголовок, чтобы раскрыть. Внизу «Закрыто» — `
+        + `вся история по выбранному человеку. Как оставите, так и откроется `
+        + `в следующий раз.<br>`) +
+    `Отметить выполнение здесь пока нельзя: задачи закрываются на созвоне.`;
+}
+
+const TABS = {tasks:'tab-t', all:'tab-a', probs:'tab-p'};
+function setView(v){
+  view = v;
+  Object.entries(TABS).forEach(([k, id]) => {
+    $(id).setAttribute('aria-selected', k === v ? 'true' : 'false');
+  });
+  render();
+}
+Object.entries(TABS).forEach(([k, id]) => { $(id).onclick = () => setView(k); });
+
+
+/* ---------- расшифровка данных ---------- */
+const b64u = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function unlock(pw){
+  const r = await fetch('data.enc.json', {cache:'no-store'});
+  if (!r.ok) throw new Error('no-file');
+  const e = await r.json();
+  const km = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt:b64u(e.salt), iterations:e.it, hash:'SHA-256'},
+    km, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt(
+    {name:'AES-GCM', iv:b64u(e.iv)}, key, b64u(e.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+function showApp(){
+  $('gate').hidden = true;
+  $('app').hidden = false;
+  render();
+}
+
+async function tryPw(pw, fromStore){
+  const btn = $('go'), err = $('err');
+  btn.disabled = true; btn.textContent = 'Открываю…'; err.hidden = true;
+  try {
+    DATA = await unlock(pw);
+    try { sessionStorage.setItem('cr-pw', pw); } catch (e) {}
+    showApp();
+  } catch (e) {
+    if (!fromStore){
+      err.textContent = e.message === 'no-file'
+        ? 'Не нашёл файл с данными рядом со страницей.'
+        : 'Пароль не подходит.';
+      err.hidden = false;
+    }
+    try { sessionStorage.removeItem('cr-pw'); } catch (e2) {}
+    btn.disabled = false; btn.textContent = 'Войти';
+    $('pw').focus(); $('pw').select();
+    return false;
+  }
+  btn.disabled = false; btn.textContent = 'Войти';
+  return true;
+}
+
+$('gf').addEventListener('submit', ev => {
+  ev.preventDefault();
+  tryPw($('pw').value, false);
+});
+
+(async () => {
+  let saved = null;
+  try { saved = sessionStorage.getItem('cr-pw'); } catch (e) {}
+  if (saved) { if (await tryPw(saved, true)) return; }
+  $('pw').focus();
+})();
+
+</script>
+</body>
+</html>
