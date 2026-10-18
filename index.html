@@ -173,6 +173,25 @@ li.defer::before{background:var(--defer)}
       padding:1px 6px;border-radius:5px;margin-top:7px}
 .sol{margin:7px 0 0;font-size:13px;color:var(--fg-dim);line-height:1.45;
      padding-left:10px;border-left:2px solid var(--line)}
+
+/* ---------- история задачи ---------- */
+.hist{margin-top:9px}
+.hist>summary{font-family:var(--f-mono);font-size:11px;color:var(--fg-faint);
+              padding:3px 0;gap:6px;letter-spacing:.02em}
+.hist>summary::before{width:5px;height:5px;border-width:1.5px}
+.hist[open]>summary{color:var(--fg-dim)}
+.hist ol{list-style:none;margin:7px 0 2px;padding:0 0 0 12px;
+         border-left:2px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.hist li{background:none;border:0;border-radius:0;padding:0;overflow:visible}
+.hist li::before{display:none}
+.hv{display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}
+.hd{font-family:var(--f-mono);font-size:11px;color:var(--fg-faint);
+    font-variant-numeric:tabular-nums}
+.hw{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--fg-dim)}
+.hw.move{color:var(--today)} .hw.close{color:var(--ok)}
+.ht{font-size:12.5px;color:var(--fg-dim);line-height:1.45;margin:3px 0 0}
+.hgap{font-size:11.5px;color:var(--fg-faint);font-style:italic}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:9px;
        padding:22px 16px;text-align:center;color:var(--fg-dim);font-size:14px}
 .foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);
@@ -283,6 +302,10 @@ function fdate(s){
   const d = d2(s); if (!d) return '—';
   return fmt(d);
 }
+function fshort(s){                       /* для истории: без дня недели */
+  const d = d2(s); if (!d) return '—';
+  return d.getDate() + ' ' + MN[d.getMonth()];
+}
 const days = s => Math.round((T0 - d2(s)) / 86400000);
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -389,6 +412,26 @@ function mvPill(m){
   return `<span class="pill ${cls}">${m} ${plural(m, 'перенос', 'переноса', 'переносов')}</span>`;
 }
 
+/* ---- история задачи ---- */
+const HW = {'перенесена':'move', 'назначен срок':'move', 'отложено':'move',
+            'заблокировано':'move', 'закрыта':'close', 'снята':'close'};
+const noDate = s => (s || '').replace(/^СРОК НЕ НАЗВАН[^.]*\.\s*/, '');
+function histBlock(h){
+  if (!h || h.length < 2) return '';
+  const items = h.map(e => {
+    const c = noDate(e.c);
+    const due = (e.due && e.due !== e.d) ? ` → ${fshort(e.due)}` : '';
+    return `<li><div class="hv"><span class="hd">${fshort(e.d)}</span>` +
+           `<span class="hw ${HW[e.w] || ''}">${esc(e.w)}${due}</span></div>` +
+           (c ? `<p class="ht">${esc(c)}</p>` : '') + `</li>`;
+  }).join('');
+  const gap = h[0].w === 'в трекере'
+    ? `<li><span class="hgap">что было раньше 7 октября — не сохранилось</span></li>` : '';
+  return `<details class="hist"><summary>история · ${h.length} ` +
+         `${plural(h.length, 'запись', 'записи', 'записей')}</summary>` +
+         `<ol>${items}${gap}</ol></details>`;
+}
+
 /* ---- карточки ---- */
 function taskCard(t, showName){
   const h = horizon(t.d, t.s);
@@ -408,6 +451,7 @@ function taskCard(t, showName){
     </div>
     ${nc ? `<span class="flag">срок поставлен не сотрудником</span>` : ''}
     ${note ? `<p class="note">${esc(note)}</p>` : ''}
+    ${histBlock(t.h)}
   </li>`;
 }
 
@@ -439,6 +483,7 @@ function doneCard(t, showName){
       ${verdict}
     </div>
     ${t.c ? `<p class="note">${esc(t.c)}</p>` : ''}
+    ${histBlock(t.h)}
   </li>`;
 }
 
