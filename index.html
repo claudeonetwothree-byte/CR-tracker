@@ -375,6 +375,20 @@ function renderSum(rows){
     `<div class="defer"><span class="n">${g.defer}</span><span class="k">отложено</span></div>`;
 }
 
+/* ---- счётчик переносов ---- */
+function plural(n, one, few, many){
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+function mvPill(m){
+  if (!m) return '';
+  const cls = m >= 5 ? 'p-over' : m >= 3 ? 'p-today' : 'p-later';
+  return `<span class="pill ${cls}">${m} ${plural(m, 'перенос', 'переноса', 'переносов')}</span>`;
+}
+
 /* ---- карточки ---- */
 function taskCard(t, showName){
   const h = horizon(t.d, t.s);
@@ -384,12 +398,12 @@ function taskCard(t, showName){
     <div class="card-top">
       ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
       <span class="pill p-${CLS[h]}">${PILL[h]}</span>
+      ${mvPill(t.m)}
     </div>
     <p class="task">${esc(t.t)}</p>
     <div class="meta">
       <span>срок ${fdate(t.d)}</span>
       ${h === 'over' ? `<span class="mv">+${days(t.d)} дн</span>` : ''}
-      ${t.m > 0 ? `<span class="mv">переносов ${t.m}</span>` : ''}
       ${t.s === 'Заблокировано' ? `<span>заблокирована</span>` : ''}
     </div>
     ${nc ? `<span class="flag">срок поставлен не сотрудником</span>` : ''}
@@ -417,12 +431,12 @@ function doneCard(t, showName){
     <div class="card-top">
       ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
       <span class="pill ${cancelled ? 'p-cancel' : 'p-done'}">${esc(t.s)}</span>
+      ${mvPill(t.m)}
     </div>
     <p class="task">${esc(t.t)}</p>
     <div class="meta">
       <span>${t.cl ? 'закрыто ' + fdate(t.cl) : 'дата закрытия не указана'}</span>
       ${verdict}
-      ${t.m > 0 ? `<span class="mv">переносов ${t.m}</span>` : ''}
     </div>
     ${t.c ? `<p class="note">${esc(t.c)}</p>` : ''}
   </li>`;
