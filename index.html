@@ -22,6 +22,7 @@ img{max-width:100%}
   --today:#9c5600; --today-bg:#fdf2e1; --today-line:#f0d9ad;
   --week:#1b5786; --week-bg:#e8f1f8; --week-line:#c6dcee;
   --later:#5b6472; --later-bg:#edf0f4; --later-line:#dbe1e9;
+  --wait:#8a5a4a; --wait-bg:#f7eeea; --wait-line:#e6d2ca;
   --ok:#15674a; --ok-bg:#e4f3ec; --ok-line:#bfe0d1;
   --defer:#6a5a8a; --defer-bg:#efecf6; --defer-line:#ddd6ea;
   --f-sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
@@ -35,6 +36,7 @@ img{max-width:100%}
   --today:#e5a948; --today-bg:#332513; --today-line:#54401d;
   --week:#79bef0; --week-bg:#14283a; --week-line:#234258;
   --later:#98a1af; --later-bg:#1d232b; --later-line:#2d353f;
+  --wait:#d9a08c; --wait-bg:#33211c; --wait-line:#55362d;
   --ok:#5fc79b; --ok-bg:#12302a; --ok-line:#215043;
   --defer:#a79bc4; --defer-bg:#241f33; --defer-line:#3a3350;
   color-scheme:dark}}
@@ -46,6 +48,7 @@ img{max-width:100%}
   --today:#e5a948; --today-bg:#332513; --today-line:#54401d;
   --week:#79bef0; --week-bg:#14283a; --week-line:#234258;
   --later:#98a1af; --later-bg:#1d232b; --later-line:#2d353f;
+  --wait:#d9a08c; --wait-bg:#33211c; --wait-line:#55362d;
   --ok:#5fc79b; --ok-bg:#12302a; --ok-line:#215043;
   --defer:#a79bc4; --defer-bg:#241f33; --defer-line:#3a3350;
   color-scheme:dark}
@@ -96,6 +99,7 @@ h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em;text-wrap:balan
 .sum .k{font-size:11px;color:var(--fg-dim);letter-spacing:.02em;display:block;margin-top:2px}
 .sum .over .n{color:var(--over)} .sum .today .n{color:var(--today)}
 .sum .week .n{color:var(--week)} .sum .later .n{color:var(--later)} .sum .defer .n{color:var(--defer)}
+.sum .wait .n{color:var(--wait)}
 .role{font-size:12.5px;color:var(--fg-dim);padding-block:10px 0}
 
 /* ---------- секции ---------- */
@@ -140,6 +144,7 @@ details[open]>summary .shut{display:none}
 .s-later summary{color:var(--later)} .s-later .cnt{background:var(--later-bg);color:var(--later)}
 .s-done summary{color:var(--ok)} .s-done .cnt{background:var(--ok-bg);color:var(--ok)}
 .s-defer summary{color:var(--defer)} .s-defer .cnt{background:var(--defer-bg);color:var(--defer)}
+.s-wait summary{color:var(--wait)} .s-wait .cnt{background:var(--wait-bg);color:var(--wait)}
 
 /* ---------- карточка ---------- */
 ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
@@ -150,6 +155,7 @@ li::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:va
 li.over::before{background:var(--over)} li.today::before{background:var(--today)}
 li.week::before{background:var(--week)} li.later::before{background:var(--later-line)}
 li.defer::before{background:var(--defer)}
+li.wait::before{background:var(--wait)}
 .card-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
 .pers{font-size:12px;font-weight:600;color:var(--fg-dim)}
 .pill{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.03em;
@@ -159,6 +165,7 @@ li.defer::before{background:var(--defer)}
 .p-week{background:var(--week-bg);color:var(--week);border-color:var(--week-line)}
 .p-later{background:var(--later-bg);color:var(--later);border-color:var(--later-line)}
 .p-defer{background:var(--defer-bg);color:var(--defer);border-color:var(--defer-line)}
+.p-wait{background:var(--wait-bg);color:var(--wait);border-color:var(--wait-line)}
 .p-done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
 .p-cancel{background:var(--later-bg);color:var(--later);border-color:var(--later-line)}
 .meta .ok{color:var(--ok)}
@@ -271,16 +278,20 @@ const _n = new Date();
 const T0 = new Date(_n.getFullYear(), _n.getMonth(), _n.getDate());
 const isoDow = T0.getDay() === 0 ? 7 : T0.getDay();
 const EOW = new Date(T0); EOW.setDate(EOW.getDate() + ((7 - isoDow) || 7));
+/* последний рабочий день перед сегодня: до первой пятиминутки после срока
+   задача не просрочена, а ждёт отчёта. Выходные не съедают это время. */
+const LWD = new Date(T0);
+do { LWD.setDate(LWD.getDate() - 1); } while (LWD.getDay() === 0 || LWD.getDay() === 6);
 
 const d2 = s => s ? new Date(s + 'T00:00:00') : null;
-const ORDER = ['over', 'today', 'week', 'later', 'nodate', 'defer', 'block'];
-const LBL = {over:'Просрочено', today:'Сегодня', week:'До конца недели',
+const ORDER = ['over', 'wait', 'today', 'week', 'later', 'nodate', 'defer', 'block'];
+const LBL = {over:'Просрочено', wait:'Ждёт отчёта', today:'Сегодня', week:'До конца недели',
              later:'Больше недели', nodate:'Без срока',
              defer:'Отложено', block:'Заблокировано'};
-const PILL = {over:'ПРОСРОЧЕНА', today:'СЕГОДНЯ', week:'НА НЕДЕЛЕ',
+const PILL = {over:'ПРОСРОЧЕНА', wait:'ЖДЁТ ОТЧЁТА', today:'СЕГОДНЯ', week:'НА НЕДЕЛЕ',
               later:'БОЛЬШЕ НЕДЕЛИ', nodate:'БЕЗ СРОКА',
               defer:'ОТЛОЖЕНА', block:'ЗАБЛОКИРОВАНА'};
-const CLS = {over:'over', today:'today', week:'week', later:'later',
+const CLS = {over:'over', wait:'wait', today:'today', week:'week', later:'later',
              nodate:'later', defer:'defer', block:'later'};
 
 function horizon(due, st){
@@ -288,7 +299,8 @@ function horizon(due, st){
   if (st === 'Заблокировано') return 'block';
   const d = d2(due);
   if (!d) return 'nodate';
-  if (d < T0) return 'over';
+  if (d < LWD) return 'over';
+  if (d < T0) return 'wait';
   if (d.getTime() === T0.getTime()) return 'today';
   if (d <= EOW) return 'week';
   return 'later';
@@ -316,7 +328,7 @@ let who = 'all';
 try { const w = localStorage.getItem('cr-who'); if (w) who = w; } catch (e) {}
 
 /* по умолчанию все разделы свёрнуты — раскрывает сам сотрудник */
-const OPEN_DEF = {over:false, today:false, week:false, later:false,
+const OPEN_DEF = {over:false, wait:false, today:false, week:false, later:false,
                   nodate:false, block:false,
                   defer:false, k1:true, k2:true, k3:false, done:false};
 let open = Object.assign({}, OPEN_DEF);
@@ -385,13 +397,14 @@ function renderSum(rows){
     return;
   }
   if (view !== 'tasks'){ $('sum').innerHTML = ''; return; }
-  const g = {over:0, today:0, week:0, later:0, defer:0};
+  const g = {over:0, wait:0, today:0, week:0, later:0, defer:0};
   rows.forEach(t => {
     const h = horizon(t.d, t.s);
     g[h === 'nodate' ? 'later' : h === 'block' ? 'defer' : h]++;
   });
   $('sum').innerHTML =
     `<div class="over"><span class="n">${g.over}</span><span class="k">просрочено</span></div>` +
+    `<div class="wait"><span class="n">${g.wait}</span><span class="k">ждёт отчёта</span></div>` +
     `<div class="today"><span class="n">${g.today}</span><span class="k">сегодня</span></div>` +
     `<div class="week"><span class="n">${g.week}</span><span class="k">до конца недели</span></div>` +
     `<div class="later"><span class="n">${g.later}</span><span class="k">больше недели</span></div>` +
