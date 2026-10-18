@@ -417,19 +417,19 @@ const HW = {'перенесена':'move', 'назначен срок':'move', '
             'заблокировано':'move', 'закрыта':'close', 'снята':'close'};
 const noDate = s => (s || '').replace(/^СРОК НЕ НАЗВАН[^.]*\.\s*/, '');
 function histBlock(h){
-  if (!h || h.length < 2) return '';
+  if (!h || !h.length) return '';
   const items = h.map(e => {
     const c = noDate(e.c);
     const due = (e.due && e.due !== e.d) ? ` → ${fshort(e.due)}` : '';
-    return `<li><div class="hv"><span class="hd">${fshort(e.d)}</span>` +
+    const gap = e.g
+      ? `<li><span class="hgap">что было между этими датами — не сохранилось</span></li>` : '';
+    return gap + `<li><div class="hv"><span class="hd">${fshort(e.d)}</span>` +
            `<span class="hw ${HW[e.w] || ''}">${esc(e.w)}${due}</span></div>` +
            (c ? `<p class="ht">${esc(c)}</p>` : '') + `</li>`;
   }).join('');
-  const gap = h[0].w === 'в трекере'
-    ? `<li><span class="hgap">что было раньше 7 октября — не сохранилось</span></li>` : '';
   return `<details class="hist"><summary>история · ${h.length} ` +
          `${plural(h.length, 'запись', 'записи', 'записей')}</summary>` +
-         `<ol>${items}${gap}</ol></details>`;
+         `<ol>${items}</ol></details>`;
 }
 
 /* ---- карточки ---- */
