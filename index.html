@@ -166,6 +166,8 @@ li.wait::before{background:var(--wait)}
 .p-later{background:var(--later-bg);color:var(--later);border-color:var(--later-line)}
 .p-defer{background:var(--defer-bg);color:var(--defer);border-color:var(--defer-line)}
 .p-wait{background:var(--wait-bg);color:var(--wait);border-color:var(--wait-line)}
+.p-late{background:var(--today-bg);color:var(--today);border-color:var(--today-line)}
+.meta .pers{font-family:var(--f-sans);font-size:12px;font-weight:600;color:var(--fg-dim)}
 .p-done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
 .p-cancel{background:var(--later-bg);color:var(--later);border-color:var(--later-line)}
 .meta .ok{color:var(--ok)}
@@ -449,20 +451,20 @@ function histBlock(h){
 function taskCard(t, showName){
   const h = horizon(t.d, t.s);
   const nc = (t.c || '').startsWith('СРОК НЕ НАЗВАН');
-  const note = nc ? (t.c || '').replace(/^СРОК НЕ НАЗВАН[^.]*\.\s*/, '') : (t.c || '');
+  const note = noDate(t.c);
   return `<li class="${CLS[h]}">
     <div class="card-top">
-      ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
       <span class="pill p-${CLS[h]}">${PILL[h]}</span>
       ${mvPill(t.m)}
     </div>
     <p class="task">${esc(t.t)}</p>
     <div class="meta">
-      <span>срок ${fdate(t.d)}</span>
+      ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
+      ${t.tk ? `<span>поставлена ${fdate(t.tk)}</span>` : ''}
+      ${t.d ? `<span>срок ${fdate(t.d)}</span>` : `<span>срок не назначен</span>`}
       ${h === 'over' ? `<span class="mv">+${days(t.d)} дн</span>` : ''}
-      ${t.s === 'Заблокировано' ? `<span>заблокирована</span>` : ''}
+      ${nc ? `<span>срок не назвал сам</span>` : ''}
     </div>
-    ${nc ? `<span class="flag">срок поставлен не сотрудником</span>` : ''}
     ${note ? `<p class="note">${esc(note)}</p>` : ''}
     ${histBlock(t.h)}
   </li>`;
@@ -471,31 +473,27 @@ function taskCard(t, showName){
 /* ---------- закрытые задачи ---------- */
 function doneCard(t, showName){
   const cancelled = t.s === 'Отменено';
-  let verdict;
-  if (cancelled){
-    verdict = '<span>снято</span>';
-  } else if (!t.d){
-    verdict = '<span>без срока</span>';
-  } else if (!t.cl){
-    verdict = '<span>дата закрытия не указана</span>';
-  } else if (t.cl <= t.d){
-    verdict = '<span class="ok">в срок</span>';
-  } else {
+  let verdict = '';
+  if (!cancelled && t.d && t.cl){
     const late = Math.round((d2(t.cl) - d2(t.d)) / 86400000);
-    verdict = `<span class="mv">с опозданием ${late} дн</span>`;
+    verdict = late > 0
+      ? `<span class="pill p-late">с опозданием ${late} ${plural(late, 'день', 'дня', 'дней')}</span>`
+      : `<span class="pill p-done">в срок</span>`;
   }
   return `<li class="done">
     <div class="card-top">
-      ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
       <span class="pill ${cancelled ? 'p-cancel' : 'p-done'}">${esc(t.s)}</span>
+      ${verdict}
       ${mvPill(t.m)}
     </div>
     <p class="task">${esc(t.t)}</p>
     <div class="meta">
-      <span>${t.cl ? 'закрыто ' + fdate(t.cl) : 'дата закрытия не указана'}</span>
-      ${verdict}
+      ${showName ? `<span class="pers">${esc(t.e)}</span>` : ''}
+      ${t.tk ? `<span>поставлена ${fdate(t.tk)}</span>` : ''}
+      <span>${t.cl ? (cancelled ? 'снята ' : 'выполнена ') + fdate(t.cl)
+                   : 'дата закрытия не указана'}</span>
     </div>
-    ${t.c ? `<p class="note">${esc(t.c)}</p>` : ''}
+    ${t.c ? `<p class="note">${esc(noDate(t.c))}</p>` : ''}
     ${histBlock(t.h)}
   </li>`;
 }
