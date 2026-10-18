@@ -612,6 +612,18 @@ async function unlock(pw){
   const r = await fetch('data.enc.json', {cache:'no-store'});
   if (!r.ok) throw new Error('no-file');
   const e = await r.json();
+  if (e.b && e.b !== BUILD){
+    let seen = null;
+    try { seen = sessionStorage.getItem('cr-build'); } catch (x) {}
+    if (seen !== e.b){
+      try {
+        sessionStorage.setItem('cr-build', e.b);
+        sessionStorage.setItem('cr-pw', pw);   // чтобы после перезагрузки не спрашивать пароль
+      } catch (x) {}
+      location.reload();
+      return new Promise(() => {});
+    }
+  }
   const km = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
   const key = await crypto.subtle.deriveKey(
@@ -621,6 +633,29 @@ async function unlock(pw){
     {name:'AES-GCM', iv:b64u(e.iv)}, key, b64u(e.ct));
   return JSON.parse(new TextDecoder().decode(pt));
 }
+
+/* ---------- свежесть ---------- */
+const BUILD = '30b34663d1dc';
+let lastLoad = 0;
+const FRESH_MS = 5 * 60 * 1000;
+
+async function refresh(){
+  if ($('app').hidden) return;
+  let pw = null;
+  try { pw = sessionStorage.getItem('cr-pw'); } catch (e) {}
+  if (!pw) return;
+  try {
+    DATA = await unlock(pw);
+    lastLoad = Date.now();
+    render();
+  } catch (e) { /* нет сети — показываем то, что уже загружено */ }
+}
+const maybeRefresh = () => {
+  if (!document.hidden && Date.now() - lastLoad > FRESH_MS) refresh();
+};
+document.addEventListener('visibilitychange', maybeRefresh);
+window.addEventListener('focus', maybeRefresh);
+window.addEventListener('pageshow', maybeRefresh);
 
 function showApp(){
   $('gate').hidden = true;
@@ -633,6 +668,7 @@ async function tryPw(pw, fromStore){
   btn.disabled = true; btn.textContent = 'Открываю…'; err.hidden = true;
   try {
     DATA = await unlock(pw);
+    lastLoad = Date.now();
     try { sessionStorage.setItem('cr-pw', pw); } catch (e) {}
     showApp();
   } catch (e) {
