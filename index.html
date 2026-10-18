@@ -511,28 +511,29 @@ const KLBL = {k1:'Проблемы', k2:'В процессе', k3:'Решено'
 const KCLS = {k1:'raised', k2:'work', k3:'done'};
 
 function probCard(p, stage, showName){
-  let meta = '';
+  /* та же простая карточка, что у задач: метки, название, две даты, история */
+  const raised = p.d ? `<span>поднята ${fdate(p.d)}</span>` : '';
+  let who = '', fin = '';
   if (stage === 'k1'){
-    meta = `<span>поднял ${esc(p.w)}</span><span>${fdate(p.d)}</span>` +
-           (p.d ? `<span class="mv">${days(p.d)} дн без владельца</span>` : '');
+    who = `<span class="pers">${esc(p.w)}</span>`;
+    fin = p.d ? `<span class="mv">${days(p.d)} дн без владельца</span>` : '';
   } else if (stage === 'k2'){
-    meta = `<span>взял ${esc(p.e)}</span>` +
-           (p.tk ? `<span>взял ${fdate(p.tk)}</span>` : '') +
-           (p.due ? `<span class="mv">решит до ${fdate(p.due)}</span>` : '') +
-           (p.d ? `<span>поднято ${fdate(p.d)}, ${days(p.d)} дн</span>` : '');
+    who = p.e ? `<span class="pers">${esc(p.e)}</span>` : '';
+    fin = p.due ? `<span class="mv">решит до ${fdate(p.due)}</span>`
+                : `<span>срок не назван</span>`;
   } else {
-    meta = `<span>решил ${esc(p.e)}</span>` +
-           (p.r ? `<span>${fdate(p.r)}</span>` : `<span>дата не зафиксирована</span>`) +
-           (p.s === 'Не подтвердилась' ? `<span>не подтвердилась</span>` : '');
+    who = p.e ? `<span class="pers">${esc(p.e)}</span>` : '';
+    fin = p.r ? `<span>${p.s === 'Не подтвердилась' ? 'закрыта' : 'решена'} ${fdate(p.r)}</span>`
+              : `<span>дата не зафиксирована</span>`;
   }
   return `<li class="${KCLS[stage]}">
     <div class="card-top">
-      ${showName && stage !== 'k1' ? `<span class="pers">${esc(p.e)}</span>` : ''}
       <span class="pill p-later">${esc(p.cat || 'без категории')}</span>
+      ${p.s === 'Не подтвердилась' ? `<span class="pill p-cancel">не подтвердилась</span>` : ''}
     </div>
     <p class="task">${esc(p.t)}</p>
-    <div class="meta">${meta}</div>
-    ${p.sol ? `<p class="sol">${esc(p.sol)}</p>` : ''}
+    <div class="meta">${who}${raised}${fin}</div>
+    ${histBlock(p.h)}
   </li>`;
 }
 
