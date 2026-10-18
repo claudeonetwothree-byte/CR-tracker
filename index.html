@@ -148,7 +148,6 @@ details[open]>summary .shut{display:none}
 
 /* ---------- карточка ---------- */
 ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
-ul.all{margin-top:22px}
 li{background:var(--surface);border:1px solid var(--line);border-radius:9px;
    padding:11px 13px 11px 14px;position:relative;overflow:hidden}
 li::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--later-line)}
@@ -258,7 +257,6 @@ li.wait::before{background:var(--wait)}
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-t" aria-selected="true">Задачи</button>
-    <button class="tab" role="tab" id="tab-a" aria-selected="false">Все задачи</button>
     <button class="tab" role="tab" id="tab-p" aria-selected="false">Проблемы</button>
   </div>
   <div class="who" id="who"></div>
@@ -366,9 +364,6 @@ function renderWho(){
     const k = view === 'probs' ? owner(x) : x.e;
     counts[k] = (counts[k] || 0) + 1;
   });
-  if (view !== 'probs') doneAll().forEach(x => {
-    counts[x.e] = (counts[x.e] || 0) + (view === 'all' ? 1 : 0);
-  });
   const names = DATA.emps.filter(e => counts[e.n] !== undefined);
   if (who !== 'all' && !counts[who]) who = 'all';
   let h = `<button class="chip" aria-pressed="${who==='all'}" data-w="all">Все<b>${list.length}</b></button>`;
@@ -385,20 +380,6 @@ function renderWho(){
 
 /* ---- сводка ---- */
 function renderSum(rows){
-  if (view === 'all'){
-    const dn = doneMine();
-    const cl = dn.filter(t => t.s === 'Выполнено').length;
-    const vs = dn.filter(t => t.s === 'Выполнено' && t.cl && t.d && t.cl <= t.d).length;
-    const ov = rows.filter(t => horizon(t.d, t.s) === 'over').length;
-    $('sum').innerHTML =
-      `<div><span class="n">${rows.length + dn.length}</span><span class="k">всего задач</span></div>` +
-      `<div class="today"><span class="n">${rows.length}</span><span class="k">активных</span></div>` +
-      `<div class="later"><span class="n">${cl}</span><span class="k">выполнено</span></div>` +
-      `<div class="defer"><span class="n">${vs}</span><span class="k">из них в срок</span></div>` +
-      `<div><span class="n">${dn.length - cl}</span><span class="k">снято</span></div>` +
-      `<div class="over"><span class="n">${ov}</span><span class="k">просрочено</span></div>`;
-    return;
-  }
   if (view !== 'tasks'){ $('sum').innerHTML = ''; return; }
   const g = {over:0, wait:0, today:0, week:0, later:0, defer:0};
   rows.forEach(t => {
@@ -581,16 +562,7 @@ function render(){
       : pos;
   }
 
-  if (view === 'all'){
-    const act = rows.slice().sort((a, b) => (a.d || '9999') < (b.d || '9999') ? -1 : 1);
-    const dn = doneMine().slice().sort((a, b) => (a.cl || '0') > (b.cl || '0') ? -1 : 1);
-    $('body').innerHTML = (act.length || dn.length)
-      ? '<ul class="all">' +
-        act.map(t => taskCard(t, showName)).join('') +
-        dn.map(t => doneCard(t, showName)).join('') +
-        '</ul>'
-      : '<div class="empty">Задач нет.</div>';
-  } else if (view === 'probs'){
+  if (view === 'probs'){
     $('body').innerHTML = kanban(rows, showName);
   } else {
     const g = {}; ORDER.forEach(k => g[k] = []);
@@ -612,10 +584,7 @@ function render(){
     `Состояние на пятиминутку ${fdate(DATA.asof)}. Цвет и раздел считаются от срока ` +
     `при каждом открытии страницы, поэтому «сегодня» — это всегда сегодня. ` +
     `Конец недели — воскресенье ${fmt(EOW)}. «Отложено» и «Заблокировано» не считаются просроченными.<br>` +
-    (view === 'all'
-      ? `Здесь всё, что было у человека: сначала активные по сроку, под ними закрытые `
-        + `от свежих к старым. Метка на карточке говорит, в каком состоянии задача.<br>`
-      : view === 'probs'
+    (view === 'probs'
       ? `Проблема идёт слева направо: подняли → кто-то взял и назвал срок → решено. `
         + `«Решено» свёрнуто, там вся история. Как оставите колонки, так и откроются `
         + `в следующий раз.<br>`
@@ -625,7 +594,7 @@ function render(){
     `Отметить выполнение здесь пока нельзя: задачи закрываются на созвоне.`;
 }
 
-const TABS = {tasks:'tab-t', all:'tab-a', probs:'tab-p'};
+const TABS = {tasks:'tab-t', probs:'tab-p'};
 function setView(v){
   view = v;
   Object.entries(TABS).forEach(([k, id]) => {
