@@ -450,7 +450,6 @@ function histBlock(h){
 /* ---- карточки ---- */
 function taskCard(t, showName){
   const h = horizon(t.d, t.s);
-  const nc = (t.c || '').startsWith('СРОК НЕ НАЗВАН');
   const note = noDate(t.c);
   return `<li class="${CLS[h]}">
     <div class="card-top">
@@ -463,7 +462,6 @@ function taskCard(t, showName){
       ${t.tk ? `<span>поставлена ${fdate(t.tk)}</span>` : ''}
       ${t.d ? `<span>срок ${fdate(t.d)}</span>` : `<span>срок не назначен</span>`}
       ${h === 'over' ? `<span class="mv">+${days(t.d)} дн</span>` : ''}
-      ${nc ? `<span>срок не назвал сам</span>` : ''}
     </div>
     ${note ? `<p class="note">${esc(note)}</p>` : ''}
     ${histBlock(t.h)}
