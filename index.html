@@ -393,8 +393,9 @@ function renderSum(rows){
     $('sum').innerHTML =
       `<div><span class="n">${rows.length + dn.length}</span><span class="k">всего задач</span></div>` +
       `<div class="today"><span class="n">${rows.length}</span><span class="k">активных</span></div>` +
-      `<div class="later"><span class="n">${cl}</span><span class="k">закрыто</span></div>` +
+      `<div class="later"><span class="n">${cl}</span><span class="k">выполнено</span></div>` +
       `<div class="defer"><span class="n">${vs}</span><span class="k">из них в срок</span></div>` +
+      `<div><span class="n">${dn.length - cl}</span><span class="k">снято</span></div>` +
       `<div class="over"><span class="n">${ov}</span><span class="k">просрочено</span></div>`;
     return;
   }
@@ -496,10 +497,13 @@ function doneCard(t, showName){
 function doneSection(rows, showName){
   if (!rows.length) return '';
   const srt = rows.slice().sort((a, b) => (a.cl || '0') > (b.cl || '0') ? -1 : 1);
+  const done = srt.filter(t => t.s === 'Выполнено').length;
   const inTime = srt.filter(t => t.s === 'Выполнено' && t.cl && t.d && t.cl <= t.d).length;
+  const cut = srt.length - done;
   return `<details class="sec s-done" data-k="done"${open.done ? ' open' : ''}>` +
-    `<summary><span class="lbl">Закрыто</span><span class="cnt">${srt.length}</span>` +
-    `<span class="rule"></span><span class="shut">в срок ${inTime}</span></summary>` +
+    `<summary><span class="lbl">Закрыто и снято</span><span class="cnt">${srt.length}</span>` +
+    `<span class="rule"></span><span class="shut">выполнено ${done}` +
+    `${inTime ? `, в срок ${inTime}` : ''}${cut ? `, снято ${cut}` : ''}</span></summary>` +
     `<ul>${srt.map(t => doneCard(t, showName)).join('')}</ul></details>`;
 }
 
